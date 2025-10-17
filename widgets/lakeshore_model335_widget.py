@@ -37,6 +37,8 @@ class LakeShoreModel335Widget(QGroupBox):
         self.heater_output1_label = QLabel("Heater Output 1: -----%")
         self.heater_output2_label = QLabel("Heater Output 2: -----%")
 
+        self.heater_channel_spin = QSpinBox()
+        self.heater_channel_spin.setRange(1, 2)
         self.heater_range_combo = QComboBox()
         self.heater_range_combo.addItems(["HIGH", "MEDIUM", "LOW"])
         self.heater_range_combo.setCurrentText("HIGH")
@@ -56,6 +58,7 @@ class LakeShoreModel335Widget(QGroupBox):
         layout.addWidget(self.temp_B_label)
         layout.addWidget(self.heater_output1_label)
         layout.addWidget(self.heater_output2_label)
+        layout.addWidget(self.heater_channel_spin)
         layout.addWidget(self.heater_range_combo)
         layout.addWidget(self.heater_on_btn)
         layout.addWidget(self.heater_off_btn)
@@ -114,13 +117,14 @@ class LakeShoreModel335Widget(QGroupBox):
     
 
     def heater_on(self, output: int):
+        output_channel = self.heater_channel_spin.value()
         range = self.heater_range_combo.currentText()
         if range == "HIGH":
-            self.controller.set_heater_range(output=output, heater_range=self.controller.HeaterRange.HIGH)
+            self.controller.set_heater_range(output=output_channel, heater_range=self.controller.HeaterRange.HIGH)
         elif range == "MEDIUM":
-            self.controller.set_heater_range(output=output, heater_range=self.controller.HeaterRange.MEDIUM)
+            self.controller.set_heater_range(output=output_channel, heater_range=self.controller.HeaterRange.MEDIUM)
         elif range == "LOW":
-            self.controller.set_heater_range(output=output, heater_range=self.controller.HeaterRange.LOW)
+            self.controller.set_heater_range(output=output_channel, heater_range=self.controller.HeaterRange.LOW)
     
 
     def heater_off(self):

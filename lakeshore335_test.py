@@ -21,3 +21,5 @@ print(f"A: {temperature_reading[0]:.2f}")
 print(f"B: {temperature_reading[0]:.2f}")
 print(f"Heater Ouput 1: {heater_output1}")
 print(f"Heater Ouput 2: {heater_output2}")
+
+temperature_controller.set_heater_range(1, temperature_controller.HeaterRange.HIGH)
