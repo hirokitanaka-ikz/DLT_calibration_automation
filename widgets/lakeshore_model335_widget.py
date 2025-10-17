@@ -1,6 +1,5 @@
 from PyQt6.QtWidgets import (
-    QGroupBox, QPushButton, QLabel, QComboBox, QVBoxLayout,
-    QSpinBox, QFormLayout, QMessageBox
+    QGroupBox, QPushButton, QLabel, QComboBox, QVBoxLayout, QSpinBox, QMessageBox
 )
 from PyQt6.QtCore import pyqtSignal
 import pyqtgraph as pg
@@ -8,10 +7,9 @@ from lakeshore import Model335
 import serial.tools.list_ports
 from widgets.base_polling_thread import BasePollingThread
 import logging
-from typing import Optional
-import time
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 BAUD_RATE = 57600 # fixed baud rate for Model 335
 
 
@@ -116,7 +114,7 @@ class LakeShoreModel335Widget(QGroupBox):
             self.connect_btn.setText("Connect")
     
 
-    def heater_on(self, output: int):
+    def heater_on(self):
         output_channel = self.heater_channel_spin.value()
         range = self.heater_range_combo.currentText()
         if range == "HIGH":

@@ -1,5 +1,6 @@
 from lakeshore import Model335
 import serial.tools.list_ports
+import time
 
 BAUD_RATE = 57600
 
@@ -23,3 +24,5 @@ print(f"Heater Ouput 1: {heater_output1}")
 print(f"Heater Ouput 2: {heater_output2}")
 
 temperature_controller.set_heater_range(1, temperature_controller.HeaterRange.HIGH)
+time.sleep(5)
+temperature_controller.all_heaters_off()
