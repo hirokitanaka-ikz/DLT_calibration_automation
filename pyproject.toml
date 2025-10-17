@@ -6,5 +6,9 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "lakeshore>=1.9.2",
+    "numpy>=2.3.4",
+    "pyqt6>=6.9.1",
+    "pyqtgraph>=0.13.7",
     "pyserial>=3.5",
+    "seabreeze>=2.10.1",
 ]
