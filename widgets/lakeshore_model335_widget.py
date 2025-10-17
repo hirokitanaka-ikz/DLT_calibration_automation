@@ -34,7 +34,8 @@ class LakeShoreModel335Widget(QGroupBox):
 
         self.temp_A_label = QLabel("Temperature A: ----- K")
         self.temp_B_label = QLabel("Temperature B: ----- K")
-        self.output_percentage_label = QLabel("Heater Output: -----%")
+        self.heater_output1_label = QLabel("Heater Output 1: -----%")
+        self.heater_output2_label = QLabel("Heater Output 2: -----%")
 
         # Layout
         layout = QVBoxLayout()
@@ -44,7 +45,8 @@ class LakeShoreModel335Widget(QGroupBox):
         layout.addWidget(self.serial_number_label)
         layout.addWidget(self.temp_A_label)
         layout.addWidget(self.temp_B_label)
-        layout.addWidget(self.output_percentage_label)
+        layout.addWidget(self.heater_output1_label)
+        layout.addWidget(self.heater_output2_label)
         self.setLayout(layout)
     
 
@@ -101,11 +103,13 @@ class LakeShoreModel335Widget(QGroupBox):
 
     def update_values_display(self, data: dict):
         temperatureA = float(data.get("temperature_A", float("nan")))
-        temperatureB = int(data.get("temperature_B", int("nan")))
-        output_percentage = float(data.get("output_percentage", float("nan")))
+        temperatureB = float(data.get("temperature_B", float("nan")))
+        heater_output_1 = data["heater_output_1"]
+        heater_output_2 = data["heater_output_2"]
         self.temp_A_label.setText(f"Temperature A: {temperatureA:.2f} K")
         self.temp_B_label.setText(f"Temperature B: {temperatureB:.2f} K")
-        self.output_percentage_label.setText(f"Heater Output: {output_percentage}%")
+        self.heater_output1_label.setText(f"Heater Output: {heater_output_1}%")
+        self.heater_output2_label.setText(f"Heater Output: {heater_output_2}%")
     
 
     @property
@@ -129,10 +133,14 @@ class LakeShoreModel335PollingThread(BasePollingThread):
     updated = pyqtSignal(dict)
 
     def get_data(self) -> dict:
+        heater_output1 = self.controller.get_heater_output(1)
+        heater_output2 = self.controller.get_heater_output(2)
+        temperature_reading = self.controller.get_all_kelvin_reading()
         data = {
-            "temperature_A": self.controller.get_celsius_reading("A"),
-            "temperature_B": self.controller.get_celsius_reading("B"),
-            "output_percentage": self.controller.get_analog_output_percentage()
+            "temperature_A": temperature_reading[0],
+            "temperature_B": temperature_reading[1],
+            "heater_output_1": heater_output1,
+            "heater_output_2": heater_output2 
             # "heater_status": ... ON OFF status (bool)
         }
         return data
