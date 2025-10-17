@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (
     QGroupBox, QPushButton, QLabel, QComboBox, QVBoxLayout,
     QSpinBox, QFormLayout, QMessageBox
 )
-from PyQt6.QtCore import QThread, pyqtSignal
+from PyQt6.QtCore import pyqtSignal
 import pyqtgraph as pg
 from lakeshore import Model335
 import serial.tools.list_ports
@@ -37,6 +37,15 @@ class LakeShoreModel335Widget(QGroupBox):
         self.heater_output1_label = QLabel("Heater Output 1: -----%")
         self.heater_output2_label = QLabel("Heater Output 2: -----%")
 
+        self.heater_range_combo = QComboBox()
+        self.heater_range_combo.addItems(["HIGH", "MEDIUM", "LOW"])
+        self.heater_range_combo.setCurrentText("HIGH")
+
+        self.heater_on_btn = QPushButton("Heater ON")
+        self.heater_on_btn.clicked.connect(self.heater_on)
+        self.heater_off_btn = QPushButton("ALL HEATER OFF")
+        self.heater_off_btn.clicked.connect(self.heater_off)
+
         # Layout
         layout = QVBoxLayout()
         layout.addWidget(self.scan_port_btn)
@@ -47,6 +56,9 @@ class LakeShoreModel335Widget(QGroupBox):
         layout.addWidget(self.temp_B_label)
         layout.addWidget(self.heater_output1_label)
         layout.addWidget(self.heater_output2_label)
+        layout.addWidget(self.heater_range_combo)
+        layout.addWidget(self.heater_on_btn)
+        layout.addWidget(self.heater_off_btn)
         self.setLayout(layout)
     
 
@@ -99,6 +111,20 @@ class LakeShoreModel335Widget(QGroupBox):
             self.scan_port_btn.setEnabled(True)
             self.ports_combo.setEnabled(True)
             self.connect_btn.setText("Connect")
+    
+
+    def heater_on(self, output: int):
+        range = self.heater_range_combo.currentText()
+        if range == "HIGH":
+            self.controller.set_heater_range(output=output, heater_range=self.controller.HeaterRange.HIGH)
+        elif range == "MEDIUM":
+            self.controller.set_heater_range(output=output, heater_range=self.controller.HeaterRange.MEDIUM)
+        elif range == "LOW":
+            self.controller.set_heater_range(output=output, heater_range=self.controller.HeaterRange.LOW)
+    
+
+    def heater_off(self):
+        self.controller.all_heaters_off()
     
 
     def update_values_display(self, data: dict):
