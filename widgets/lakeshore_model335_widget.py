@@ -8,6 +8,9 @@ import serial.tools.list_ports
 from widgets.base_polling_thread import BasePollingThread
 import logging
 
+lake_shore_log = logging.getLogger("lakeshore")
+lake_shore_log.setLevel(logging.WARNING)
+
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 BAUD_RATE = 57600 # fixed baud rate for Model 335
