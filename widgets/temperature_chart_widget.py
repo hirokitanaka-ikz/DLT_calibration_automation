@@ -91,7 +91,7 @@ class TemperatureChartWidget(QGroupBox):
             self.Tb_data.append(Tb)
             self.plot_Ta.setData(self.t_data, self.Ta_data)
             self.plot_Tb.setData(self.t_data, self.Tb_data)
-            print(self.t_data, self.Ta_data, self.Tb_data)
+            # print(self.t_data, self.Ta_data, self.Tb_data)
         except Exception as e:
             logging.error(f"Fail to plot data: {e}")
             return

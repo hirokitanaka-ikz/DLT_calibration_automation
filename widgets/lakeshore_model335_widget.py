@@ -173,10 +173,10 @@ class LakeShoreModel335Widget(QGroupBox):
         temperatureB = float(data.get("temperature_B", float("nan")))
         heater_output_1 = data["heater_output_1"]
         heater_output_2 = data["heater_output_2"]
-        self.temp_A_label.setText(f"Temperature A: {temperatureA:.2f} K")
-        self.temp_B_label.setText(f"Temperature B: {temperatureB:.2f} K")
-        self.heater_output1_label.setText(f"Heater Output 1: {heater_output_1}%")
-        self.heater_output2_label.setText(f"Heater Output 2: {heater_output_2}%")
+        self.temp_A_label.setText(f"{temperatureA:.2f} K")
+        self.temp_B_label.setText(f"{temperatureB:.2f} K")
+        self.heater_output1_label.setText(f"{heater_output_1}%")
+        self.heater_output2_label.setText(f"{heater_output_2}%")
         self._last_temp_A = temperatureA
         self._last_temp_B = temperatureB
         self._buffer_A.append(temperatureA)
