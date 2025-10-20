@@ -166,7 +166,7 @@ class LakeShoreModel335Widget(QGroupBox):
             self.controller.disconnect_usb()
             self.controller = None
         except Exception as e:
-            logging.error(e)
+            return
 
 
 # polling thread class
