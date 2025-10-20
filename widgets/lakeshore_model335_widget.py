@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (
-    QGroupBox, QPushButton, QLabel, QComboBox, QVBoxLayout, QFormLayout,
+    QGroupBox, QPushButton, QLabel, QComboBox, QVBoxLayout, QHBoxLayout, QFormLayout,
     QSpinBox, QDoubleSpinBox, QMessageBox, QWidget
 )
 from PyQt6.QtCore import pyqtSignal
@@ -40,10 +40,10 @@ class LakeShoreModel335Widget(QGroupBox):
         self.connect_btn.clicked.connect(self.toggle_connect)
         self.serial_number_label = QLabel("Serial Number: -----")
 
-        self.temp_A_label = QLabel("Temperature A: ----- K")
-        self.temp_B_label = QLabel("Temperature B: ----- K")
-        self.heater_output1_label = QLabel("Heater Output 1: -----%")
-        self.heater_output2_label = QLabel("Heater Output 2: -----%")
+        self.temp_A_label = QLabel("----- K")
+        self.temp_B_label = QLabel("----- K")
+        self.heater_output1_label = QLabel("-----%")
+        self.heater_output2_label = QLabel("-----%")
 
         self.heater_channel_spin = QSpinBox()
         self.heater_channel_spin.setRange(1, 2)
@@ -63,6 +63,7 @@ class LakeShoreModel335Widget(QGroupBox):
         self.heater_on_btn.clicked.connect(self.heater_on)
         self.heater_off_btn = QPushButton("ALL HEATER OFF")
         self.heater_off_btn.clicked.connect(self.heater_off)
+        self.heater_off_btn.setStyleSheet("background-color: red; color: white; font-weight:bold")
 
         # Layout
         layout = QVBoxLayout()
@@ -70,16 +71,21 @@ class LakeShoreModel335Widget(QGroupBox):
         layout.addWidget(self.ports_combo)
         layout.addWidget(self.connect_btn)
         layout.addWidget(self.serial_number_label)
-        layout.addWidget(self.temp_A_label)
-        layout.addWidget(self.temp_B_label)
-        layout.addWidget(self.heater_output1_label)
-        layout.addWidget(self.heater_output2_label)
+
+        hlayout = QHBoxLayout()
+        form_reading = QFormLayout()
+        form_reading.addRow("Temperature A:", self.temp_A_label)
+        form_reading.addRow("Temperature B:", self.temp_B_label)
+        form_reading.addRow("Heater Output 1:", self.heater_output1_label)
+        form_reading.addRow("Heater Output 2:", self.heater_output2_label)
         form_heater_output = QFormLayout()
         form_heater_output.addRow("Target Temperature:", self.heater_target_spin)
         form_heater_output.addRow("Heater Output Channel:", self.heater_channel_spin)
         form_heater_output.addRow("Heater Output Range", self.heater_range_combo)
         form_heater_output.addRow("Temperature Stabilized:", self.control_status_label)
-        layout.addLayout(form_heater_output)
+        hlayout.addLayout(form_reading)
+        hlayout.addLayout(form_heater_output)
+        layout.addLayout(hlayout)
         layout.addWidget(self.heater_on_btn)
         layout.addWidget(self.heater_off_btn)
         self.setLayout(layout)
@@ -164,13 +170,13 @@ class LakeShoreModel335Widget(QGroupBox):
         heater_output_2 = data["heater_output_2"]
         self.temp_A_label.setText(f"Temperature A: {temperatureA:.2f} K")
         self.temp_B_label.setText(f"Temperature B: {temperatureB:.2f} K")
-        self.heater_output1_label.setText(f"Heater Output: {heater_output_1}%")
-        self.heater_output2_label.setText(f"Heater Output: {heater_output_2}%")
+        self.heater_output1_label.setText(f"Heater Output 1: {heater_output_1}%")
+        self.heater_output2_label.setText(f"Heater Output 2: {heater_output_2}%")
         self._last_temp_A = temperatureA
         self._last_temp_B = temperatureB
         self._buffer_A.append(temperatureA)
         self._buffer_B.append(temperatureB)
-        self.control_status_label.setText(str(self.is_temperature_stable()))
+        self.control_status_label.setText(str(self.is_temperature_stable))
         
     
 
@@ -186,7 +192,7 @@ class LakeShoreModel335Widget(QGroupBox):
     
 
     @property
-    def is_temperature_stable(self, tol_A: float = 0.02, std_tol: float = 0.05) -> bool:
+    def is_temperature_stable(self, tol_A: float = 0.02, std_tol: float = 0.02) -> bool:
         if len(self._buffer_A) < 60: # length of buffer
             return False
         target_A = self.heater_target_spin.value()
