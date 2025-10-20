@@ -166,6 +166,7 @@ class LakeShoreModel335Widget(QGroupBox):
     def set_target(self, target_temperature: float):
         channel = self.heater_channel_spin.value()
         self.controller.set_control_setpoint(output=channel, value=target_temperature)
+        self.heater_target_spin.setValue(target_temperature)
     
 
     def update_values_display(self, data: dict):

@@ -8,6 +8,7 @@ from widgets.lakeshore_model335_widget import LakeShoreModel335Widget
 from widgets.temperature_chart_widget import TemperatureChartWidget
 
 import os
+import numpy as np
 from datetime import datetime
 from pathlib import Path
 import csv
@@ -128,17 +129,17 @@ class MeasurementProcessWidget(QGroupBox):
         if self.timer is None:
             # start
             # set to start temperature
-            self.temperature_controller_widget.heater_on()
-
             self.timer = QTimer(self)
             self.timer.timeout.connect(self.record)
-            self.temperature_list = range(
-                self.start_temperature_spin.value(),
-                self.stop_temperature_spin.value() + self.step_temperature_spin.value(),
-                self.step_temperature_spin.value()
-            )
+            Tstart = self.start_temperature_spin.value()
+            Tstop = self.stop_temperature_spin.value()
+            Tstep = self.step_temperature_spin.value()
+            num = int(abs(Tstop - Tstart) / Tstep) + 1
+            self.temperature_list = np.linspace(Tstart, Tstop, num)
             self.temperature_index = 0
             try:
+                self.temperature_controller_widget.set_target(float(self.temperature_list[self.temperature_index]))
+                self.temperature_controller_widget.heater_on()
                 self.timer.start(5 * 1000) # check temperature stability every 5 sec -> 10000 ms
             except (TypeError, Exception) as e:
                 logging.error(f"Failed to start process: {e}")
@@ -154,6 +155,7 @@ class MeasurementProcessWidget(QGroupBox):
             self.start_btn.setText("Start Process")
             self.start_btn.setStyleSheet("background-color: green; color: white; font-weight:bold")
             self.temperature_list = []
+            self.temperature_index = None
             QMessageBox.information(self, "Information", "Process Stop")
             logging.info("Process stopped")
     
