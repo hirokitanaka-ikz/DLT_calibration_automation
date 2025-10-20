@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (
     QGroupBox, QPushButton, QLabel, QComboBox, QVBoxLayout, QFormLayout,
-    QSpinBox, QDoubleSpinBox, QMessageBox
+    QSpinBox, QDoubleSpinBox, QMessageBox, QWidget
 )
 from PyQt6.QtCore import pyqtSignal
 from lakeshore import Model335
@@ -57,6 +57,7 @@ class LakeShoreModel335Widget(QGroupBox):
         self.heater_target_spin.setSingleStep(5.0)
         self.heater_target_spin.setSuffix(" K")
         self.heater_target_spin.editingFinished.connect(self.change_target)
+        self.control_status_label = QLabel("----")
 
         self.heater_on_btn = QPushButton("Heater ON")
         self.heater_on_btn.clicked.connect(self.heater_on)
@@ -77,6 +78,7 @@ class LakeShoreModel335Widget(QGroupBox):
         form_heater_output.addRow("Target Temperature:", self.heater_target_spin)
         form_heater_output.addRow("Heater Output Channel:", self.heater_channel_spin)
         form_heater_output.addRow("Heater Output Range", self.heater_range_combo)
+        form_heater_output.addRow("Temperature Stabilized:", self.control_status_label)
         layout.addLayout(form_heater_output)
         layout.addWidget(self.heater_on_btn)
         layout.addWidget(self.heater_off_btn)
@@ -168,12 +170,14 @@ class LakeShoreModel335Widget(QGroupBox):
         self._last_temp_B = temperatureB
         self._buffer_A.append(temperatureA)
         self._buffer_B.append(temperatureB)
+        self.control_status_label.setText(str(self.is_temperature_stable()))
+        
     
 
     @property
     def temperatures(self) -> tuple[float, float]:
         return self._last_temp_A, self._last_temp_B
-    
+
 
     def get_data_dict(self) -> dict:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -181,11 +185,17 @@ class LakeShoreModel335Widget(QGroupBox):
         return {"timestamp": timestamp, "temperature_A": temperatures[0], "temperature_B": temperatures[1]}
     
 
-    # @property
-    # def is_stable(target_A: float, tol_A: float, std_tol_A: float = 0.01) -> bool:
-    #     if len(self._buffer_A) < 60:
-    #         return False
-    #     temps
+    @property
+    def is_temperature_stable(self, tol_A: float = 0.02, std_tol: float = 0.05) -> bool:
+        if len(self._buffer_A) < 60: # length of buffer
+            return False
+        target_A = self.heater_target_spin.value()
+        temps_A = np.array(self._buffer_A)
+        temps_B = np.array(self._buffer_B)
+        mean_A = np.mean(temps_A)
+        std_A = np.std(temps_A)
+        std_B = np.std(temps_B)
+        return (abs(mean_A - target_A) < tol_A) and (std_A < std_tol) and (std_B < std_tol)
 
 
     def __del__(self):
