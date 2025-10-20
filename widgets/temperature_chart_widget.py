@@ -1,0 +1,137 @@
+from PyQt6.QtWidgets import (
+    QGroupBox, QPushButton, QFileDialog, QMessageBox, QVBoxLayout, QFormLayout, QSpinBox
+)
+from PyQt6.QtCore import QTimer
+import os
+import pyqtgraph as pg
+from pathlib import Path
+import logging
+from datetime import datetime
+import csv
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+ENCODING = "utf-8"
+
+
+def default_filename() -> str:
+    now = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return f"{now}_temperature"
+
+
+class TemperatureChartWidget(QGroupBox):
+    def __init__(self, temperature_control_widget, parent=None):
+        super().__init__("Temperature Chart", parent)
+        self.temperature_control_widget = temperature_control_widget
+        self.record_timer = None
+        self.start_timestamp = None
+
+
+        # UI elements
+        self.record_interval_spin = QSpinBox()
+        self.record_interval_spin.setRange(1, 600) # sec
+        self.record_interval_spin.setSingleStep(1)
+        self.record_interval_spin.setSuffix("sec")
+        self.record_btn = QPushButton("Start Record")
+        self.record_btn.clicked.connect(self.toggle_record)
+
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.setBackground("w")
+        self.plot_widget.showGrid(x=True, y=True)
+        self.plot_widget.setLabel("left", "T", units="K")
+        self.plot_widget.setLabel("bottom", "Time", units="min")
+
+        # layout
+        layout = QVBoxLayout()
+        record_form = QFormLayout()
+        record_form.addRow("Record Interval", self.record_interval_spin)
+        record_form.addRow("", self.record_btn)
+        layout.addLayout(record_form)
+        layout.addWidget(self.plot_widget)
+        self.setLayout(layout)
+
+
+    def initialize_chart(self):
+        self.plot_widget.clear()
+        self.t_data = []
+        self.Ta_data = []
+        self.Tb_data = []
+        self.strat_time = None
+        self.plot_Ta = self.plot_widget.plot(self.t_data, self.Ta_data, pen="red")
+        self.plot_Tb = self.plot_widget.plot(self.t_data, self.Tb_data, pen="blue")
+    
+
+    def __del__(self):
+        try:
+            self.record_timer.stop()
+        except Exception:
+            pass
+    
+
+    def update_chart(self, data_dict) -> None:
+        try:
+            timestamp = datetime.fromisoformat(data_dict["timestamp"])
+            Ta = data_dict["Ta"]
+            Tb = data_dict["Tb"]
+            if self.start_timestamp is None:
+                self.start_timestamp = timestamp
+            elapsed_min = (timestamp - self.start_timestamp).total_seconds() / 60.0
+            self.t_data.append(elapsed_min)
+            self.Ta_data.append(Ta)
+            self.Tb_data.append(Tb)
+            self.plot_Ta.setData(self.t_data, self.Ta_data)
+            self.plot_Tb.setData(self.t_data, self.Tb_data)
+        except Exception as e:
+            logging.error(f"Fail to plot data: {e}")
+            return
+        self.write_data(data_dict)
+    
+
+    def write_data(self, data_dict) -> None:
+        try:
+            # write header if file not existing
+            if not os.path.exists(self.csv_path):
+                with open(self.csv_path, "w", newline="", encoding=ENCODING) as f_csv:
+                    writer = csv.DictWriter(f_csv, fieldnames=data_dict.keys())
+                    writer.writeheader()
+            # add data
+            with open(self.csv_path, "a", newline="", encoding=ENCODING) as f_csv:
+                writer = csv.DictWriter(f_csv, fieldnames=data_dict.keys())
+                writer.writerow(data_dict)
+        except Exception as e:
+            logging.error(f"Fail to write data to csv: {e}")
+            return
+
+
+    def toggle_record(self):
+        if self.record_timer is None:
+            folder = QFileDialog.getExistingDirectory(self, "Select Folder to Save Data")
+            if not folder:
+                QMessageBox.warning(self, "Warning", "No folder selected.")
+                return
+            folder_path = Path(folder)
+            default_name = default_filename()
+            self.csv_path = folder_path / f"{default_name}.csv"
+            # plot and write first data
+            self.initialize_chart()
+            data_dict = self.temperature_control_widget.get_data_dict()
+            self.update_chart(data_dict)
+            self.write_data(data_dict)
+            self.record_timer = QTimer(self)
+            self.record_timer.timeout.connect(self.write_data)
+            try:
+                self.record_timer.start(int(self.record_interval_spin.value() * 1000)) # sec -> millisec
+            except TypeError as e:
+                logging.error(f"Failed to start timer: {e}")
+                self.record_timer = None
+                return
+            self.record_btn.setText("Stop Record")
+            QMessageBox.information(self, "Recording Start", f"save path: \n{self.data_logger.csv_path}\nRecording start")
+            logging.info("Data recording started")
+        else:
+            self.record_timer.stop()
+            self.record_timer = None
+            self.start_timestamp = None
+            QMessageBox.information(self, "Recording Stop", f"save path: \n{self.data_logger.csv_path}\nRecording stop")
+            logging.info("Data recording stopped")
+            self.record_btn.setText("Start Record")

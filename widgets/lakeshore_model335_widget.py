@@ -2,10 +2,10 @@ from PyQt6.QtWidgets import (
     QGroupBox, QPushButton, QLabel, QComboBox, QVBoxLayout, QSpinBox, QMessageBox
 )
 from PyQt6.QtCore import pyqtSignal
-import pyqtgraph as pg
 from lakeshore import Model335
 import serial.tools.list_ports
 from widgets.base_polling_thread import BasePollingThread
+from datetime import datetime
 import logging
 
 lake_shore_log = logging.getLogger("lakeshore")
@@ -146,6 +146,12 @@ class LakeShoreModel335Widget(QGroupBox):
     @property
     def temperatures(self) -> list[float]:
         return self._last_temp_A, self._last_temp_B
+    
+
+    def get_data_dict(self) -> dict:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        temperatures = self.temperatures
+        return {"timestamp": timestamp, "temperature_A": temperatures[0], "temperature_B": temperatures[1]}
     
 
     def __del__(self):
