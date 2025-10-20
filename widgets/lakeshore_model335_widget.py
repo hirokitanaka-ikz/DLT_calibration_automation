@@ -1,11 +1,14 @@
 from PyQt6.QtWidgets import (
-    QGroupBox, QPushButton, QLabel, QComboBox, QVBoxLayout, QSpinBox, QMessageBox
+    QGroupBox, QPushButton, QLabel, QComboBox, QVBoxLayout, QFormLayout,
+    QSpinBox, QDoubleSpinBox, QMessageBox
 )
 from PyQt6.QtCore import pyqtSignal
 from lakeshore import Model335
 import serial.tools.list_ports
 from widgets.base_polling_thread import BasePollingThread
 from datetime import datetime
+from collections import deque
+import numpy as np
 import logging
 
 lake_shore_log = logging.getLogger("lakeshore")
@@ -26,6 +29,8 @@ class LakeShoreModel335Widget(QGroupBox):
         self._polling_interval = polling_interval
         self._last_temp_A = 0.0
         self._last_temp_B = 0.0
+        self._buffer_A = deque(maxlen=60)
+        self._buffer_B = deque(maxlen=60)
 
         # UI Elements
         self.scan_port_btn = QPushButton("Scan COM Port")
@@ -45,6 +50,13 @@ class LakeShoreModel335Widget(QGroupBox):
         self.heater_range_combo = QComboBox()
         self.heater_range_combo.addItems(["HIGH", "MEDIUM", "LOW"])
         self.heater_range_combo.setCurrentText("HIGH")
+        self.heater_target_spin = QDoubleSpinBox()
+        self.heater_target_spin.setRange(0.0, 350.0)
+        self.heater_target_spin.setValue(300.0)
+        self.heater_target_spin.setDecimals(2)
+        self.heater_target_spin.setSingleStep(5.0)
+        self.heater_target_spin.setSuffix(" K")
+        self.heater_target_spin.editingFinished.connect(self.change_target)
 
         self.heater_on_btn = QPushButton("Heater ON")
         self.heater_on_btn.clicked.connect(self.heater_on)
@@ -61,8 +73,11 @@ class LakeShoreModel335Widget(QGroupBox):
         layout.addWidget(self.temp_B_label)
         layout.addWidget(self.heater_output1_label)
         layout.addWidget(self.heater_output2_label)
-        layout.addWidget(self.heater_channel_spin)
-        layout.addWidget(self.heater_range_combo)
+        form_heater_output = QFormLayout()
+        form_heater_output.addRow("Target Temperature:", self.heater_target_spin)
+        form_heater_output.addRow("Heater Output Channel:", self.heater_channel_spin)
+        form_heater_output.addRow("Heater Output Range", self.heater_range_combo)
+        layout.addLayout(form_heater_output)
         layout.addWidget(self.heater_on_btn)
         layout.addWidget(self.heater_off_btn)
         self.setLayout(layout)
@@ -134,6 +149,12 @@ class LakeShoreModel335Widget(QGroupBox):
         self.controller.all_heaters_off()
     
 
+    def change_target(self):
+        target_temperature = self.heater_target_spin.value()
+        channel = self.heater_channel_spin.value()
+        self.controller.set_control_setpoint(output=channel, value=target_temperature)
+    
+
     def update_values_display(self, data: dict):
         temperatureA = float(data.get("temperature_A", float("nan")))
         temperatureB = float(data.get("temperature_B", float("nan")))
@@ -145,6 +166,8 @@ class LakeShoreModel335Widget(QGroupBox):
         self.heater_output2_label.setText(f"Heater Output: {heater_output_2}%")
         self._last_temp_A = temperatureA
         self._last_temp_B = temperatureB
+        self._buffer_A.append(temperatureA)
+        self._buffer_B.append(temperatureB)
     
 
     @property
@@ -157,6 +180,13 @@ class LakeShoreModel335Widget(QGroupBox):
         temperatures = self.temperatures
         return {"timestamp": timestamp, "temperature_A": temperatures[0], "temperature_B": temperatures[1]}
     
+
+    # @property
+    # def is_stable(target_A: float, tol_A: float, std_tol_A: float = 0.01) -> bool:
+    #     if len(self._buffer_A) < 60:
+    #         return False
+    #     temps
+
 
     def __del__(self):
         if self.polling_thread is not None:

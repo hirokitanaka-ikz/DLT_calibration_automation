@@ -22,7 +22,7 @@ def main():
 
     win = QWidget()
     win.setWindowTitle("DLT Calibration App")
-    win.resize(1200, 800)
+    win.resize(1200, 1000)
 
     polling_interval = 0.5 # sec
 
