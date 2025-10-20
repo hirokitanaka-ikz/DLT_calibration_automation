@@ -24,8 +24,7 @@ class TemperatureChartWidget(QGroupBox):
         super().__init__("Temperature Chart", parent)
         self.temperature_control_widget = temperature_control_widget
         self.record_timer = None
-        self.start_timestamp = None
-
+        self.data_dict = None
 
         # UI elements
         self.record_interval_spin = QSpinBox()
@@ -56,9 +55,10 @@ class TemperatureChartWidget(QGroupBox):
         self.t_data = []
         self.Ta_data = []
         self.Tb_data = []
-        self.strat_time = None
-        self.plot_Ta = self.plot_widget.plot(self.t_data, self.Ta_data, pen="red")
-        self.plot_Tb = self.plot_widget.plot(self.t_data, self.Tb_data, pen="blue")
+        self.start_timestamp = None
+        self.plot_Ta = self.plot_widget.plot(self.t_data, self.Ta_data, pen="r", name="Temperature A")
+        self.plot_Tb = self.plot_widget.plot(self.t_data, self.Tb_data, pen="b", name="Temperature B")
+        self.plot_widget.enableAutoRange()
     
 
     def __del__(self):
@@ -68,11 +68,21 @@ class TemperatureChartWidget(QGroupBox):
             pass
     
 
-    def update_chart(self, data_dict) -> None:
+    def update_data(self) -> None:
         try:
-            timestamp = datetime.fromisoformat(data_dict["timestamp"])
-            Ta = data_dict["Ta"]
-            Tb = data_dict["Tb"]
+            self.data_dict = self.temperature_control_widget.get_data_dict()
+        except Exception as e:
+            logging.error(f"Failed to load data from controller widget: {e}")
+            return
+        self.update_chart()
+        self.write_data()
+    
+
+    def update_chart(self) -> None:
+        try:
+            timestamp = datetime.fromisoformat(self.data_dict["timestamp"])
+            Ta = self.data_dict["temperature_A"]
+            Tb = self.data_dict["temperature_B"]
             if self.start_timestamp is None:
                 self.start_timestamp = timestamp
             elapsed_min = (timestamp - self.start_timestamp).total_seconds() / 60.0
@@ -81,23 +91,23 @@ class TemperatureChartWidget(QGroupBox):
             self.Tb_data.append(Tb)
             self.plot_Ta.setData(self.t_data, self.Ta_data)
             self.plot_Tb.setData(self.t_data, self.Tb_data)
+            print(self.t_data, self.Ta_data, self.Tb_data)
         except Exception as e:
             logging.error(f"Fail to plot data: {e}")
             return
-        self.write_data(data_dict)
     
 
-    def write_data(self, data_dict) -> None:
+    def write_data(self) -> None:
         try:
             # write header if file not existing
             if not os.path.exists(self.csv_path):
                 with open(self.csv_path, "w", newline="", encoding=ENCODING) as f_csv:
-                    writer = csv.DictWriter(f_csv, fieldnames=data_dict.keys())
+                    writer = csv.DictWriter(f_csv, fieldnames=self.data_dict.keys())
                     writer.writeheader()
             # add data
             with open(self.csv_path, "a", newline="", encoding=ENCODING) as f_csv:
-                writer = csv.DictWriter(f_csv, fieldnames=data_dict.keys())
-                writer.writerow(data_dict)
+                writer = csv.DictWriter(f_csv, fieldnames=self.data_dict.keys())
+                writer.writerow(self.data_dict)
         except Exception as e:
             logging.error(f"Fail to write data to csv: {e}")
             return
@@ -114,11 +124,10 @@ class TemperatureChartWidget(QGroupBox):
             self.csv_path = folder_path / f"{default_name}.csv"
             # plot and write first data
             self.initialize_chart()
-            data_dict = self.temperature_control_widget.get_data_dict()
-            self.update_chart(data_dict)
-            self.write_data(data_dict)
+            self.update_chart()
+            self.write_data()
             self.record_timer = QTimer(self)
-            self.record_timer.timeout.connect(self.write_data)
+            self.record_timer.timeout.connect(self.update_data)
             try:
                 self.record_timer.start(int(self.record_interval_spin.value() * 1000)) # sec -> millisec
             except TypeError as e:
@@ -126,12 +135,12 @@ class TemperatureChartWidget(QGroupBox):
                 self.record_timer = None
                 return
             self.record_btn.setText("Stop Record")
-            QMessageBox.information(self, "Recording Start", f"save path: \n{self.data_logger.csv_path}\nRecording start")
+            QMessageBox.information(self, "Recording Start", f"save path: \n{self.csv_path}\nRecording start")
             logging.info("Data recording started")
         else:
             self.record_timer.stop()
             self.record_timer = None
             self.start_timestamp = None
-            QMessageBox.information(self, "Recording Stop", f"save path: \n{self.data_logger.csv_path}\nRecording stop")
+            QMessageBox.information(self, "Recording Stop", f"save path: \n{self.csv_path}\nRecording stop")
             logging.info("Data recording stopped")
             self.record_btn.setText("Start Record")

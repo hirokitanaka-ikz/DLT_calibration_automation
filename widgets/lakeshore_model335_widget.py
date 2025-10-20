@@ -24,7 +24,9 @@ class LakeShoreModel335Widget(QGroupBox):
         self.controller = None
         self.polling_thread = None
         self._polling_interval = polling_interval
-        
+        self._last_temp_A = 0.0
+        self._last_temp_B = 0.0
+
         # UI Elements
         self.scan_port_btn = QPushButton("Scan COM Port")
         self.scan_port_btn.clicked.connect(self.scan_com_port)
@@ -141,10 +143,12 @@ class LakeShoreModel335Widget(QGroupBox):
         self.temp_B_label.setText(f"Temperature B: {temperatureB:.2f} K")
         self.heater_output1_label.setText(f"Heater Output: {heater_output_1}%")
         self.heater_output2_label.setText(f"Heater Output: {heater_output_2}%")
+        self._last_temp_A = temperatureA
+        self._last_temp_B = temperatureB
     
 
     @property
-    def temperatures(self) -> list[float]:
+    def temperatures(self) -> tuple[float, float]:
         return self._last_temp_A, self._last_temp_B
     
 
