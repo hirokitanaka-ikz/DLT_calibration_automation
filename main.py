@@ -10,6 +10,7 @@ from widgets.temperature_chart_widget import TemperatureChartWidget
 import os
 from datetime import datetime
 from pathlib import Path
+import csv
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 ENCODING = "utf-8"
@@ -58,6 +59,8 @@ class MeasurementProcessWidget(QGroupBox):
         self.timer = None
         self.csv_path = None
         self.spectra_path = None
+        self.temperature_list = []
+        self.temperature_index = None
 
         # UI elements
         self.path_label = QLabel("----------")
@@ -78,11 +81,6 @@ class MeasurementProcessWidget(QGroupBox):
         self.step_temperature_spin.setSingleStep(1)
         self.step_temperature_spin.setSuffix("K")
         self.step_temperature_spin.setValue(10)
-        self.record_interval_spin = QSpinBox()
-        self.record_interval_spin.setRange(1, 60)
-        self.record_interval_spin.setSingleStep(1)
-        self.record_interval_spin.setSuffix("min")
-        self.record_interval_spin.setValue(10)
         self.start_btn = QPushButton("Start Process")
         self.start_btn.setStyleSheet("background-color: green; color: white; font-weight:bold")
         self.start_btn.clicked.connect(self.toggle_start)
@@ -97,7 +95,6 @@ class MeasurementProcessWidget(QGroupBox):
         layout1.addWidget(self.path_btn)
         layout1.addWidget(self.path_label)
         layout2 = QHBoxLayout()
-        layout2.addWidget(self.record_interval_spin)
         layout2.addWidget(self.start_btn)
         layout.addLayout(form)
         layout.addLayout(layout1)
@@ -130,17 +127,25 @@ class MeasurementProcessWidget(QGroupBox):
     def toggle_start(self):
         if self.timer is None:
             # start
+            # set to start temperature
+            self.temperature_controller_widget.heater_on()
+
             self.timer = QTimer(self)
             self.timer.timeout.connect(self.record)
+            self.temperature_list = range(
+                self.start_temperature_spin.value(),
+                self.stop_temperature_spin.value() + self.step_temperature_spin.value(),
+                self.step_temperature_spin.value()
+            )
+            self.temperature_index = 0
             try:
-                self.timer.start(int(self.record_interval_spin.value() * 60 * 1000)) # min -> ms
+                self.timer.start(5 * 1000) # check temperature stability every 5 sec -> 10000 ms
             except (TypeError, Exception) as e:
                 logging.error(f"Failed to start process: {e}")
                 self.timer = None
                 return
             self.start_btn.setText("Stop Process")
             self.start_btn.setStyleSheet("background-color: red; color: white; font-weight:bold")
-            self.record_interval_spin.setEnabled(False)
             QMessageBox.information(self, "Information", "Process Start")
             logging.info("Process started")
         else:
@@ -148,40 +153,71 @@ class MeasurementProcessWidget(QGroupBox):
             self.timer = None
             self.start_btn.setText("Start Process")
             self.start_btn.setStyleSheet("background-color: green; color: white; font-weight:bold")
-            self.record_interval_spin.setEnabled(True)
+            self.temperature_list = []
             QMessageBox.information(self, "Information", "Process Stop")
             logging.info("Process stopped")
     
 
+    def go_next_temperature(self) -> None:
+        try:
+            self.temperature_index += 1
+            self.temperature_controller_widget.set_target(float(self.temperature_list[self.temperature_index]))
+        except (TypeError, AttributeError, IndexError, Exception) as e:
+            logging.error(f"Error: failed to set the target temprature, {e}")
+            self.toggle_start() # stop the process
+
+
     # connected to timer
     def record(self):
+        if not self.temperature_controller_widget.is_temperature_stable:
+            logging.info("Temperature not stabilized yet")
+            return
         self.save_spectrum()
         self.write_temperatures()
-
-
-    def get_spectrum(self):
-        pass
+        self.go_next_temperature()
 
 
     def save_spectrum(self):
-        pass
-
-
-    def get_temperatures(self):
-        pass
+        spectrum_dict = self.spectrometer_widget.spectrum_data
+        if spectrum_dict and self.spectra_path:
+            try:
+                temperature = self.temperature_list[self.temperature_index]
+                filename = f"{temperature:.1f}K.csv"
+                filepath = self.spectra_path / filename
+                with open(filepath, 'w', encoding=ENCODING) as f:
+                    writer = csv.DictWriter(f, fieldnames=self.spectrum_dict.keys())
+                    writer.writeheader()
+                    writer.writerows(spectrum_dict.values())
+                logging.info(f"Saved spectrum to {filepath}")
+            except Exception as e:
+                logging.error(f"Failed to save spectrum: {e}")
+                self.toggle_start() # stop process
 
 
     def write_temperatures(self):
-        pass
+        try:
+            temp_A, temp_B = self.temperature_controller_widget.temperatures
+            temp_dict = {"temperature_A": temp_A, "temperature_B": temp_B}
+            # if file not existing
+            if not os.path.exists(self.csv_path):
+                with open(self.csv_path, "w", newline="", encoding=ENCODING) as f_csv:
+                    writer = csv.DictWriter(f_csv, fieldnames=temp_dict.keys())
+                    writer.writeheader()
+            # add data
+            with open(self.csv_path, "a", newline="", encoding=ENCODING) as f_csv:
+                writer = csv.DictWriter(f_csv, fieldnames=self.temp_dict.keys())
+                writer.writerow(self.temp_dict)
+        except Exception as e:
+            logging.error(f"Fail to write data to csv: {e}")
+            return
 
-    
+
     def __del__(self):
         try:
             self.timer.stop()
         except Exception:
             pass
         
-
 
 if __name__ == "__main__":
     main()

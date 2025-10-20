@@ -168,6 +168,11 @@ class OceanSpectrometerWidget(QGroupBox):
     
 
     @property
+    def spectrum_data(self) -> dict:
+        return {"wavelength": self.wavelength, "intensity": self.intensity - self.dark}
+    
+
+    @property
     def peak_wavelength(self) -> Optional[float]:
         try:
             text = self.peak_wavelength_label.text()
