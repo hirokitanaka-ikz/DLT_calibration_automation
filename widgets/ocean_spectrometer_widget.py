@@ -43,6 +43,7 @@ class OceanSpectrometerWidget(QGroupBox):
         self.integration_time_spin = QSpinBox()
         self.integration_time_spin.setSuffix(" us")
         self.integration_time_spin.setSingleStep(10)
+        self.integration_time_spin.setValue(300)
         self.integration_time_spin.valueChanged.connect(self.set_integration_time)
         self.integration_time_spin.setEnabled(False)
 
@@ -160,6 +161,13 @@ class OceanSpectrometerWidget(QGroupBox):
         mean_wavelength = np.sum(self.wavelength * intensity_array) / np.sum(intensity_array)
         self.peak_wavelength_label.setText(f"{peak_wavelength:.2f} nm")
         self.mean_wavelength_label.setText(f"{mean_wavelength:.2f} nm")
+    
+
+    def enable_widget(self, enable: bool) -> None:
+        self.connect_btn.setEnabled(enable)
+        self.integration_time_spin.setEnabled(enable)
+        self.start_btn.setEnabled(enable)
+        self.dark_btn.setEnabled(enable)
 
     
     def __del__(self):

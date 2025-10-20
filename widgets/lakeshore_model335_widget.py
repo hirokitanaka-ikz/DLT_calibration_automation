@@ -185,7 +185,6 @@ class LakeShoreModel335Widget(QGroupBox):
         self.control_status_label.setText(str(self.is_temperature_stable))
         
     
-
     @property
     def temperatures(self) -> tuple[float, float]:
         return self._last_temp_A, self._last_temp_B
@@ -204,10 +203,19 @@ class LakeShoreModel335Widget(QGroupBox):
         target_A = self.heater_target_spin.value()
         temps_A = np.array(self._buffer_A)
         temps_B = np.array(self._buffer_B)
-        mean_A = np.mean(temps_A)
         std_A = np.std(temps_A)
         std_B = np.std(temps_B)
-        return (abs(mean_A - target_A) < tol_A) and (std_A < std_tol) and (std_B < std_tol)
+        return (abs(self._buffer_A[-1] - target_A) < tol_A) and (std_A < std_tol) and (std_B < std_tol)
+
+
+    def enable_widget(self, enable: bool) -> None:
+        self.scan_port_btn.setEnabled(enable)
+        self.connect_btn.setEnabled(enable)
+        self.heater_target_spin.setEnabled(enable)
+        self.heater_channel_spin.setEnabled(enable)
+        self.heater_range_combo.setEnabled(enable)
+        self.heater_on_btn.setEnabled(enable)
+        self.heater_off_btn.setEnabled(enable)
 
 
     def __del__(self):

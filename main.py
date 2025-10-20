@@ -126,6 +126,15 @@ class MeasurementProcessWidget(QGroupBox):
 
 
     def toggle_start(self):
+        if self.spectrometer_widget.spectrometer is None:
+            QMessageBox.warning(self, "Warning", "Spectrometer not connected.")
+            return
+        if self.temperature_controller_widget.controller is None:
+            QMessageBox.warning(self, "Warning", "Temperature controller not connected.")
+            return
+        if self.csv_path is None:
+            QMessageBox.warning(self, "Warning", "Save path not selected.")
+            return
         if self.timer is None:
             # start
             # set to start temperature
@@ -147,6 +156,8 @@ class MeasurementProcessWidget(QGroupBox):
                 return
             self.start_btn.setText("Stop Process")
             self.start_btn.setStyleSheet("background-color: red; color: white; font-weight:bold")
+            self.spectrometer_widget.enable_widget(False)
+            self.temperature_controller_widget.enable_widget(False)
             QMessageBox.information(self, "Information", "Process Start")
             logging.info("Process started")
         else:
@@ -156,6 +167,8 @@ class MeasurementProcessWidget(QGroupBox):
             self.start_btn.setStyleSheet("background-color: green; color: white; font-weight:bold")
             self.temperature_list = []
             self.temperature_index = None
+            self.spectrometer_widget.enable_widget(True)
+            self.temperature_controller_widget.enable_widget(True)
             QMessageBox.information(self, "Information", "Process Stop")
             logging.info("Process stopped")
     
@@ -169,7 +182,7 @@ class MeasurementProcessWidget(QGroupBox):
             self.toggle_start() # stop the process
 
 
-    # connected to timer
+    # this is connected to timer
     def record(self):
         if not self.temperature_controller_widget.is_temperature_stable:
             logging.info("Temperature not stabilized yet")
