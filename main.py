@@ -50,7 +50,6 @@ def main():
     app.exec()
 
 
-
 class MeasurementProcessWidget(QGroupBox):
     def __init__(self, spectrometer_widget, temperature_controller_widget, parent=None):
         super().__init__("Process", parent)
@@ -182,12 +181,17 @@ class MeasurementProcessWidget(QGroupBox):
     
 
     def go_next_temperature(self) -> None:
+        if self.timer is None:
+            return
         try:
             self.temperature_index += 1
             self.temperature_controller_widget.set_target(float(self.temperature_list[self.temperature_index]))
-        except (TypeError, AttributeError, IndexError, Exception) as e:
+        except IndexError:
+            logging.info(f"Finish scanning target temperatures")
+            self.stop_process() # index error -> stop process
+        except (TypeError, AttributeError, Exception) as e:
             logging.error(f"Error: failed to set the target temprature, {e}")
-            self.stop_process()
+            self.stop_process() # index error -> stop process
 
 
     # this is connected to timer
@@ -201,6 +205,8 @@ class MeasurementProcessWidget(QGroupBox):
 
 
     def save_spectrum(self):
+        if self.timer is None:
+            return
         spectrum_dict = self.spectrometer_widget.spectrum_dict
         if spectrum_dict and self.spectra_path:
             try:
@@ -210,7 +216,8 @@ class MeasurementProcessWidget(QGroupBox):
                 with open(filepath, 'w', encoding=ENCODING) as f:
                     writer = csv.DictWriter(f, fieldnames=spectrum_dict.keys())
                     writer.writeheader()
-                    writer.writerows(spectrum_dict.values())
+                    for w, i in zip(spectrum_dict["wavelength"], spectrum_dict["intensity"]):
+                        writer.writerow({"wavelength": w, "intensity": i})
                 logging.info(f"Saved spectrum to {filepath}")
             except Exception as e:
                 logging.error(f"Failed to save spectrum: {e}")
@@ -218,6 +225,8 @@ class MeasurementProcessWidget(QGroupBox):
 
 
     def write_temperatures(self):
+        if self.timer is None:
+            return
         try:
             temp_A, temp_B = self.temperature_controller_widget.temperatures
             temp_dict = {"temperature_A": temp_A, "temperature_B": temp_B}
