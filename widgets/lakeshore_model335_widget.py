@@ -197,7 +197,7 @@ class LakeShoreModel335Widget(QGroupBox):
     
 
     @property
-    def is_temperature_stable(self, tol_A: float = 0.02, std_tol: float = 0.02) -> bool:
+    def is_temperature_stable(self, tol_A: float = 0.05, std_tol: float = 0.02) -> bool:
         if len(self._buffer_A) < 60: # length of buffer
             return False
         target_A = self.heater_target_spin.value()

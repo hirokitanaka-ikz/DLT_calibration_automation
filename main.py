@@ -47,7 +47,6 @@ def main():
     
     win.setLayout(layout)
     win.show()
-
     app.exec()
 
 
@@ -125,7 +124,14 @@ class MeasurementProcessWidget(QGroupBox):
             self.spectra_path = None
 
 
-    def toggle_start(self):
+    def toggle_start_stop(self):
+        if self.timer is None:
+            self.start_process()
+        else:
+            self.stop_process()
+    
+
+    def start_process(self):
         if self.spectrometer_widget.spectrometer is None:
             QMessageBox.warning(self, "Warning", "Spectrometer not connected.")
             return
@@ -135,42 +141,44 @@ class MeasurementProcessWidget(QGroupBox):
         if self.csv_path is None:
             QMessageBox.warning(self, "Warning", "Save path not selected.")
             return
-        if self.timer is None:
-            # start
-            # set to start temperature
-            self.timer = QTimer(self)
-            self.timer.timeout.connect(self.record)
-            Tstart = self.start_temperature_spin.value()
-            Tstop = self.stop_temperature_spin.value()
-            Tstep = self.step_temperature_spin.value()
-            num = int(abs(Tstop - Tstart) / Tstep) + 1
-            self.temperature_list = np.linspace(Tstart, Tstop, num)
-            self.temperature_index = 0
-            try:
-                self.temperature_controller_widget.set_target(float(self.temperature_list[self.temperature_index]))
-                self.temperature_controller_widget.heater_on()
-                self.timer.start(5 * 1000) # check temperature stability every 5 sec -> 10000 ms
-            except (TypeError, Exception) as e:
-                logging.error(f"Failed to start process: {e}")
-                self.timer = None
-                return
-            self.start_btn.setText("Stop Process")
-            self.start_btn.setStyleSheet("background-color: red; color: white; font-weight:bold")
-            self.spectrometer_widget.enable_widget(False)
-            self.temperature_controller_widget.enable_widget(False)
-            QMessageBox.information(self, "Information", "Process Start")
-            logging.info("Process started")
-        else:
-            self.timer.stop()
+        
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.record)
+        Tstart = self.start_temperature_spin.value()
+        Tstop = self.stop_temperature_spin.value()
+        Tstep = self.step_temperature_spin.value()
+        num = int(abs(Tstop - Tstart) / Tstep) + 1
+        self.temperature_list = np.linspace(Tstart, Tstop, num)
+        self.temperature_index = 0
+        try:
+            self.temperature_controller_widget.set_target(float(self.temperature_list[self.temperature_index]))
+            self.temperature_controller_widget.heater_on()
+            self.timer.start(10 * 1000) # check temperature stability every 10 sec -> 10000 ms
+        except (TypeError, Exception) as e:
+            logging.error(f"Failed to start process: {e}")
             self.timer = None
-            self.start_btn.setText("Start Process")
-            self.start_btn.setStyleSheet("background-color: green; color: white; font-weight:bold")
-            self.temperature_list = []
-            self.temperature_index = None
-            self.spectrometer_widget.enable_widget(True)
-            self.temperature_controller_widget.enable_widget(True)
-            QMessageBox.information(self, "Information", "Process Stop")
-            logging.info("Process stopped")
+            return
+        self.start_btn.setText("Stop Process")
+        self.start_btn.setStyleSheet("background-color: red; color: white; font-weight:bold")
+        self.spectrometer_widget.enable_widget(False)
+        self.temperature_controller_widget.enable_widget(False)
+        QMessageBox.information(self, "Information", "Process Start")
+        logging.info("Process started")
+
+
+    def stop_process(self):
+        if self.timer is None:
+            return
+        self.timer.stop()
+        self.timer = None
+        self.start_btn.setText("Start Process")
+        self.start_btn.setStyleSheet("background-color: green; color: white; font-weight:bold")
+        self.temperature_list = []
+        self.temperature_index = None
+        self.spectrometer_widget.enable_widget(True)
+        self.temperature_controller_widget.enable_widget(True)
+        QMessageBox.information(self, "Information", "Process Stop")
+        logging.info("Process stopped")
     
 
     def go_next_temperature(self) -> None:
@@ -179,7 +187,7 @@ class MeasurementProcessWidget(QGroupBox):
             self.temperature_controller_widget.set_target(float(self.temperature_list[self.temperature_index]))
         except (TypeError, AttributeError, IndexError, Exception) as e:
             logging.error(f"Error: failed to set the target temprature, {e}")
-            self.toggle_start() # stop the process
+            self.stop_process()
 
 
     # this is connected to timer
@@ -193,20 +201,20 @@ class MeasurementProcessWidget(QGroupBox):
 
 
     def save_spectrum(self):
-        spectrum_dict = self.spectrometer_widget.spectrum_data
+        spectrum_dict = self.spectrometer_widget.spectrum_dict
         if spectrum_dict and self.spectra_path:
             try:
                 temperature = self.temperature_list[self.temperature_index]
                 filename = f"{temperature:.1f}K.csv"
                 filepath = self.spectra_path / filename
                 with open(filepath, 'w', encoding=ENCODING) as f:
-                    writer = csv.DictWriter(f, fieldnames=self.spectrum_dict.keys())
+                    writer = csv.DictWriter(f, fieldnames=spectrum_dict.keys())
                     writer.writeheader()
                     writer.writerows(spectrum_dict.values())
                 logging.info(f"Saved spectrum to {filepath}")
             except Exception as e:
                 logging.error(f"Failed to save spectrum: {e}")
-                self.toggle_start() # stop process
+                self.stop_process()
 
 
     def write_temperatures(self):
@@ -220,8 +228,8 @@ class MeasurementProcessWidget(QGroupBox):
                     writer.writeheader()
             # add data
             with open(self.csv_path, "a", newline="", encoding=ENCODING) as f_csv:
-                writer = csv.DictWriter(f_csv, fieldnames=self.temp_dict.keys())
-                writer.writerow(self.temp_dict)
+                writer = csv.DictWriter(f_csv, fieldnames=temp_dict.keys())
+                writer.writerow(temp_dict)
         except Exception as e:
             logging.error(f"Fail to write data to csv: {e}")
             return

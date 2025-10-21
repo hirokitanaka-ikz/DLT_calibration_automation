@@ -43,6 +43,7 @@ class OceanSpectrometerWidget(QGroupBox):
         self.integration_time_spin = QSpinBox()
         self.integration_time_spin.setSuffix(" us")
         self.integration_time_spin.setSingleStep(10)
+        self.integration_time_spin.setRange(10, 5000000)
         self.integration_time_spin.setValue(300)
         self.integration_time_spin.valueChanged.connect(self.set_integration_time)
         self.integration_time_spin.setEnabled(False)
@@ -176,7 +177,7 @@ class OceanSpectrometerWidget(QGroupBox):
     
 
     @property
-    def spectrum_data(self) -> dict:
+    def spectrum_dict(self) -> dict:
         return {"wavelength": self.wavelength, "intensity": self.intensity - self.dark}
     
 
