@@ -82,7 +82,7 @@ class MeasurementProcessWidget(QGroupBox):
         self.step_temperature_spin.setValue(10)
         self.start_btn = QPushButton("Start Process")
         self.start_btn.setStyleSheet("background-color: green; color: white; font-weight:bold")
-        self.start_btn.clicked.connect(self.toggle_start)
+        self.start_btn.clicked.connect(self.toggle_start_stop)
 
         # layout
         form = QFormLayout()
@@ -213,7 +213,7 @@ class MeasurementProcessWidget(QGroupBox):
                 temperature = self.temperature_list[self.temperature_index]
                 filename = f"{temperature:.1f}K.csv"
                 filepath = self.spectra_path / filename
-                with open(filepath, 'w', encoding=ENCODING) as f:
+                with open(filepath, 'w', encoding=ENCODING, newline="") as f:
                     writer = csv.DictWriter(f, fieldnames=spectrum_dict.keys())
                     writer.writeheader()
                     for w, i in zip(spectrum_dict["wavelength"], spectrum_dict["intensity"]):
