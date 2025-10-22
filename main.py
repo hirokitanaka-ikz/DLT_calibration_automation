@@ -74,7 +74,7 @@ class MeasurementProcessWidget(QGroupBox):
         self.stop_temperature_spin.setRange(10, 350)
         self.stop_temperature_spin.setSingleStep(5)
         self.stop_temperature_spin.setSuffix("K")
-        self.stop_temperature_spin.setValue(300)
+        self.stop_temperature_spin.setValue(310)
         self.step_temperature_spin = QSpinBox()
         self.step_temperature_spin.setRange(5, 100)
         self.step_temperature_spin.setSingleStep(1)
